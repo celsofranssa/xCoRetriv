@@ -4,10 +4,16 @@ from omegaconf import OmegaConf
 from source.helper.EvalHelper import EvalHelper
 from source.helper.FitHelper import FitHelper
 from source.helper.PredictHelper import PredictHelper
+from source.helper.RetrieverFitHelper import RetrieverFitHelper
+
 
 def fit(params):
-    helper = FitHelper(params)
-    helper.perform_fit()
+    if params.model.type == "Retriever":
+        helper = RetrieverFitHelper(params)
+        helper.perform_fit()
+    elif params.model.type == "ReRanker":
+        helper = FitHelper(params)
+        helper.perform_fit()
 
 def predict(params):
     helper = PredictHelper(params)

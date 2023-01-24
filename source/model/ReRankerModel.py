@@ -5,11 +5,11 @@ from source.metric.MRRMetric import MRRMetric
 from source.pooling.HiddenStatePooling import HiddenStatePooling
 
 
-class XMTCModel(LightningModule):
+class ReRankerXMTCModel(LightningModule):
     """Encodes the text and label into an same space of embeddings."""
 
     def __init__(self, hparams):
-        super(XMTCModel, self).__init__()
+        super(ReRankerXMTCModel, self).__init__()
         self.save_hyperparameters(hparams)
 
         # encoders
@@ -25,9 +25,11 @@ class XMTCModel(LightningModule):
         self.mrr = MRRMetric(hparams.metric)
 
     def forward(self, text, label):
+        text_att = torch.where(text > 0, 1, 0)
+        label_att = torch.where(label > 0, 1, 0)
         return self.get_score(
-            self.pool(self.encoder(text), torch.where(text > 0, 1, 0)),
-            self.pool(self.encoder(label), torch.where(label > 0, 1, 0))
+            self.pool(self.encoder(text, text_att), text_att),
+            self.pool(self.encoder(label, label_att), label_att)
         )
 
     def get_score(self, text_rpr, label_rpr):
@@ -71,10 +73,15 @@ class XMTCModel(LightningModule):
         self.mrr.reset()
 
     def predict_step(self, batch, batch_idx, dataloader_idx=None):
+        # a = self(batch["text"], batch["label"])
+        # print(f"a({a.shape}): \n{a}\n")
+        # d = torch.diagonal(a)
+        # print(f"d({d.shape}): \n{d}\n")
         return {
             "text_idx": batch["text_idx"],
             "label_idx": batch["label_idx"],
-            "score": self(batch["text"], batch["label"])
+            "retriever_score": batch["retriever_score"],
+            "reranker_score": torch.diagonal(self(batch["text"], batch["label"]))
         }
 
     def configure_optimizers(self):

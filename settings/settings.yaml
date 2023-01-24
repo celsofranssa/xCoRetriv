@@ -1,15 +1,15 @@
 defaults:
   - _self_
-  - model: BERT
+  - model: ReRankerBERT
   - data: Wiki10-31k
 
 tasks: [ "eval" ]
 
 
 trainer:
-  max_epochs: 8
+  max_epochs: 16
   gpus: 1
-  patience: 5
+  patience: 7
   min_delta: 0.03
   precision: 16
   fast_dev_run: False
@@ -43,7 +43,7 @@ eval:
   metrics: ["mrr","ndcg","precision","recall","hit_rate"]
   thresholds: [1,5,10,100]
   num_nearest_neighbors: 100
-  label_cls: ["all", "head", "tail"]
+  label_cls: ["tail"]
   index:
     M: 128
     indexThreadQty: ${data.num_workers}

@@ -1,9 +1,12 @@
-name: BERT
+name: ReRankerBERT
+type: Retriever
 
 encoder:
-  _target_: source.encoder.BertEncoder.BertEncoder
+  _target_: source.encoder.RetrieverBertEncoder.RetrieverBertEncoder
   architecture: bert-base-uncased
   output_attentions: False
+  pooling:
+    _target_: source.pooling.NoPooling.NoPooling
 
 hidden_size: 768
 

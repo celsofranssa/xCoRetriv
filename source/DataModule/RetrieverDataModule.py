@@ -2,18 +2,18 @@ import pickle
 import pytorch_lightning as pl
 from torch.utils.data import DataLoader
 
-from source.Dataset.FitDataset import FitDataset
-from source.Dataset.ReRankerPredictDataset import ReRankerPredictDataset
+from source.Dataset.RetrieverFitDataset import RetrieverFitDataset
+from source.Dataset.RetrieverLabelDataset import RetrieverLabelDataset
+from source.Dataset.RetrieverTextDataset import RetrieverTextDataset
 
 
-class XMTCDataModule(pl.LightningDataModule):
+class RetrieverDataModule(pl.LightningDataModule):
 
-    def __init__(self, params, text_tokenizer, label_tokenizer, rankings, fold_idx):
-        super(XMTCDataModule, self).__init__()
+    def __init__(self, params, text_tokenizer, label_tokenizer, fold_idx):
+        super(RetrieverDataModule, self).__init__()
         self.params = params
         self.text_tokenizer = text_tokenizer
         self.label_tokenizer = label_tokenizer
-        self.rankings = rankings
         self.fold_idx = fold_idx
 
     def prepare_data(self):
@@ -24,9 +24,8 @@ class XMTCDataModule(pl.LightningDataModule):
             self.pseudo_labels = pickle.load(pseudo_labels_file)
 
     def setup(self, stage=None):
-
         if stage == 'fit':
-            self.train_dataset = FitDataset(
+            self.train_dataset = RetrieverFitDataset(
                 samples=self.samples,
                 pseudo_labels=self.pseudo_labels,
                 ids_path=self.params.dir + f"fold_{self.fold_idx}/train.pkl",
@@ -36,7 +35,7 @@ class XMTCDataModule(pl.LightningDataModule):
                 labels_max_length=self.params.label_max_length
             )
 
-            self.val_dataset = FitDataset(
+            self.val_dataset = RetrieverFitDataset(
                 samples=self.samples,
                 pseudo_labels=self.pseudo_labels,
                 ids_path=self.params.dir + f"fold_{self.fold_idx}/val.pkl",
@@ -45,18 +44,20 @@ class XMTCDataModule(pl.LightningDataModule):
                 text_max_length=self.params.text_max_length,
                 labels_max_length=self.params.label_max_length
             )
-
-        if stage == 'test' or stage == "predict":
-            self.predict_dataset = ReRankerPredictDataset(
+        elif stage == "predict":
+            self.text_dataset = RetrieverTextDataset(
                 samples=self.samples,
-                rankings=self.rankings[self.fold_idx],
-                pseudo_labels=self.pseudo_labels,
                 ids_path=self.params.dir + f"fold_{self.fold_idx}/test.pkl",
                 text_tokenizer=self.text_tokenizer,
-                label_tokenizer=self.label_tokenizer,
-                text_max_length=self.params.text_max_length,
-                labels_max_length=self.params.label_max_length
+                text_max_length=self.params.text_max_length
             )
+            self.label_dataset = RetrieverLabelDataset(
+                samples=self.samples,
+                ids_path=self.params.dir + f"fold_{self.fold_idx}/test.pkl",
+                text_tokenizer=self.text_tokenizer,
+                text_max_length=self.params.text_max_length
+            )
+
 
     def train_dataloader(self):
         return DataLoader(
@@ -71,12 +72,5 @@ class XMTCDataModule(pl.LightningDataModule):
             self.val_dataset,
             batch_size=self.params.batch_size,
             shuffle=True,
-            num_workers=self.params.num_workers
-        )
-
-    def predict_dataloader(self):
-        return DataLoader(
-            self.predict_dataset,
-            batch_size=self.params.batch_size,
             num_workers=self.params.num_workers
         )
